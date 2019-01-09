@@ -1,0 +1,1272 @@
+var w = 800,
+    h = 600;
+    
+var defaultStrokeWidth = 1.5;
+
+//var color = d3.scale.category20();
+
+
+
+function getPlotDataPath()
+{
+	//for testing use
+	//return "/nb/getNetworkPlotData";
+	
+	//for public use
+	return "/gclabapps/nb/getNetworkPlotData";
+}
+
+
+
+
+
+var modelvis = d3.select("#modelChart").append("svg:svg")
+    .attr("width", w)
+    .attr("height", h)//;
+    .attr("pointer-events", "all")
+    .append('svg:g')
+    .call(d3.behavior.zoom().on("zoom", zoomHandler))
+    .append('svg:g');
+
+
+
+
+var vis = d3.select("#geneChart").append("svg:svg")
+    .attr("width", w)
+    .attr("height", h)//;
+    .attr("pointer-events", "all")
+    .append('svg:g')
+    .call(d3.behavior.zoom().on("zoom", zoomHandler))
+    .append('svg:g');
+  
+
+
+function initd3()
+{
+	document.getElementById("geneChart").innerHTML="";
+	
+	
+	vis = d3.select("#geneChart").append("svg:svg")
+    .attr("width", w)
+    .attr("height", h)//;
+    .attr("pointer-events", "all")
+    .append('svg:g')
+    .call(d3.behavior.zoom().on("zoom", zoomHandler))
+    .append('svg:g');
+  
+}
+
+
+  
+function zoomHandler() 
+{
+	if (d3.event.sourceEvent.type=='mousewheel' || d3.event.sourceEvent.type=='DOMMouseScroll')
+	{
+  		vis.attr("transform",
+      			 "translate(" + d3.event.translate + ")"
+      			 + " scale(" + d3.event.scale*1.2 + ")");
+    }
+}  
+  
+
+
+var selectedSymbolName="";
+var projectId="0";
+
+initProjectId();
+initModelGraph();
+//initSlider();
+initJQSlider();
+
+/*
+function initProjectId()
+{
+  var pathArray = window.location.search.split( '=' );
+  projectId = pathArray[1];
+
+}
+*/
+
+
+
+
+
+function initModelGraph()
+{
+	document.getElementById("modelChart").style.display = "block"; 
+	document.getElementById("geneChart").style.display = "none"; 
+    document.getElementById("controlPanelDiv").style.display = "none"; 
+	
+	//var moduleDataPath = "/fb/getNetworkPlotModuleData?id="+projectId;
+	var moduleDataPath = getPlotDataPath()+"?num=9999;model=symbol;symbol=module;id="+projectId;
+    
+	
+	//d3.json("data/sub_network_modules.json", function(json) {
+		
+	d3.json(moduleDataPath, function(json) {
+    var force = self.force = d3.layout.force()
+        .nodes(json.nodes)
+        .links(json.links)
+        //.gravity(.05)
+        //.distance(390)
+        .distance(300)
+        .linkStrength(0.05)
+        //.charge(-100)
+        .charge(-300)
+        .size([w, h])
+        .start();
+
+    var link = modelvis.selectAll("line.link")
+        .data(json.links)
+        .enter().append("svg:line")
+        .attr("class", "link")
+        .attr("x1", function(d) { return d.source.x; })
+        .attr("y1", function(d) { return d.source.y; })
+        .attr("x2", function(d) { return d.target.x; })
+        .attr("y2", function(d) { return d.target.y; });
+
+    var node = modelvis.selectAll("g.node")
+        .data(json.nodes)
+      	.enter().append("svg:g")
+        .attr("class", "node")
+        .call(force.drag);
+
+	node.append("svg:circle")
+     .attr("r", function(d) { return getSize(); }  )
+     .style("fill",  function(d) { return getColor(); }  );
+
+
+    node.append("svg:text")
+        .attr("class", "nodetext")
+        .attr("dx", 12)
+        .attr("dy", ".35em")
+        .text(function(d) { return d.name });
+    
+    
+    
+    node.on("mouseover", fade(0.1,true));
+    	                              
+    node.on("mouseout", function(){fade(0,false); } );	  
+    
+    
+    node.on("click", function(d, i) {
+    	
+    	var name = d.name;	
+    	selectedSymbolName=name;
+    	
+    	if(name.indexOf("mi") == -1)
+    	{	
+    		document.getElementById("modelReswetButton").style.display = "none"; 
+    		
+    		document.getElementById("modelChart").style.display = "none"; 
+    		document.getElementById("geneChart").style.display = "block"; 
+    		document.getElementById("controlPanelDiv").style.display = "block"; 
+    		
+    		
+    		document.getElementById("symbolNameLabel").style.display = "block"; 
+    		document.getElementById("symbolNameLabel").innerHTML = name; 
+    		
+    		
+    		
+    		
+    		initd3();
+    		
+    		//alert(name);
+    		//initGneGraph( "data/visant_symbol_" + name + ".json");
+    		
+    		
+    		
+    		document.getElementById("sliderDiv").style.display = "block"; 
+    		var num = document.getElementById("horiz_value").value;
+    		//alert(num);
+    		
+    		var file = getPlotDataPath()+"?num="+num+";model=symbol;symbol="+name+";id="+projectId;
+    		initGneGraph(file);
+
+            
+    		
+    		
+    		
+    		
+    	}
+    	
+    	
+    });
+    
+    
+    
+    
+    
+    link.on("click", function(d, i) {
+
+    					var matchresult = matchLink(connectedLinks,d);
+    				
+    					if(matchresult)
+    					{
+    						
+            			link.style("stroke-opacity", function(o) {
+            		
+            				if(o===d)
+                			{
+                				link.attr("class", "link");
+                				return 1;
+                			}	
+                			else
+                			{
+                				link.attr("class", "linkHighLightSingle");
+                				return 0;
+                			}
+            			});
+            			
+            			
+            		   }
+            			
+            			
+            			
+        			}
+    
+    );
+    
+    
+    
+    link.on("contextmenu", function(data, index) {
+     
+     /*
+        d3.event.preventDefault();
+     
+        link.style("stroke-opacity", function(o) {
+            				if(o===data)
+                			{ 
+                				
+                				link.attr("class", "link");
+                				
+                				var sourceNodeName = o.source.name ;
+                				var targetNodeName = o.target.name;
+                				
+                				
+                				
+                				document.getElementById("genecard_a").style.display = "none"; 
+                				document.getElementById("brainspan_a").style.display = "none"; 
+                				document.getElementById("cox_a").style.display = "none"; 
+                				
+                				document.getElementById("pubmid_a").setAttribute("href", "http://www.ncbi.nlm.nih.gov/pubmed?term="+"(" + sourceNodeName + ")" +"OR"+ "(" + targetNodeName + ")"  );
+     							
+     							
+     	
+     							document.getElementById("NGPopUp").style.left = "400px";
+     							document.getElementById("NGPopUp").style.top = "300px";
+     							document.getElementById("NGPopUp").style.display = "block";     	
+
+
+     							cancelTimer();
+                				
+                				return 1;
+                			}	
+                			else
+                			{
+                				
+                				link.attr("class", "linkHighLightSingle");
+                				return 0;
+                			}
+            			});
+     
+     
+     */
+     
+  
+     	
+	});
+                                                         
+
+	
+	var linkedByIndex = {};
+    json.links.forEach(function(d) {
+        linkedByIndex[d.source.index + "," + d.target.index] = 1;
+    });
+
+
+	function isConnected(a, b) {
+        return linkedByIndex[a.index + "," + b.index] || linkedByIndex[b.index + "," + a.index] || a.index == b.index;
+    }
+
+    
+    var selectedNodeName = "";
+    //var connectedNodes = [];
+    //var connectedLinks = [];
+
+	function fade(opacity,linkHighLight) {
+        return function(d) {
+        	
+        	
+            node.style("stroke-opacity", function(o) {
+                thisOpacity = isConnected(d, o) ? 1 : opacity;
+                this.setAttribute('fill-opacity', thisOpacity);
+                return thisOpacity;
+            });
+            
+			selectedNodeName = d.name;
+            //connectedNodes = [];
+
+            link.style("stroke-opacity", function(o) {
+                
+                //link.attr("class", "linkRed");
+                
+                
+                if(linkHighLight)
+                {
+                	
+                	//alert(o.value); 
+                	
+                	link.attr("class", "linkHighLight");
+                	
+                }
+                else
+                {
+                	link.attr("class", "link");
+                }
+                
+                
+                
+                
+                if(o.source === d || o.target === d)
+                {	/*
+                	if(o.source === d)
+                		connectedNodes.push(o.target.name);
+                	else
+                		connectedNodes.push(o.source.name);
+                	
+                	connectedLinks.push(o);
+                	
+                	*/
+                	
+                	return 1;
+                }
+                else
+                {
+                	return opacity;
+                }
+             
+            });
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            link.style("stroke", function(o) {
+               
+                
+                
+                if(o.source === d || o.target === d)
+                {	
+                	if(o.value < 0)
+                		return "#F99";
+                	else
+                		return "#aaa";
+                }
+                else
+                {
+                	return "#aaa";
+                }
+             
+            });            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+           // var s="";
+            //for(var i=0; i<connectedNodes.length;i++)
+            //{
+            //	s = s + connectedNodes[i]+"<br/>";
+            //}
+            
+            //document.getElementById("infoPanel").innerHTML = s;
+            
+            
+            
+            
+        };
+    }
+
+
+
+
+	node.on("contextmenu", function(data, index) {
+     
+		//alert("R:"+data.name);
+        /*
+     	d3.event.preventDefault();
+     	
+			
+        showAllLinkField();
+     	
+     	document.getElementById("genecard_a").setAttribute("href", "http://www.genecards.org/cgi-bin/carddisp.pl?gene="+data.name);
+     	document.getElementById("brainspan_a").setAttribute("href", "http://www.brainspan.org/rnaseq/search?type=rnaseq&query="+data.name);
+     	document.getElementById("pubmid_a").setAttribute("href", "http://www.ncbi.nlm.nih.gov/pubmed?term="+data.name);
+     	document.getElementById("cox_a").setAttribute("href", "http://coxpresdb.jp/cgi-bin/inkeyword.cgi?type=any&word="+data.name);
+     	
+     	
+     	document.getElementById("NGPopUp").style.left = (data.x+30)+"px";
+     	document.getElementById("NGPopUp").style.top = data.y+"px";
+     	document.getElementById("NGPopUp").style.display = "block";     	
+     
+     	cancelTimer();
+     	
+     	*/
+	});
+
+
+
+
+	node.on("dblclick", function(d) {
+    	
+
+    	d.x=400;
+    	d.y=300;
+    	d.px=400;
+    	d.py=300;
+    	force.start();
+    
+  
+    	   
+    	                              });	 
+
+
+
+
+    force.on("tick", function() {
+      link.attr("x1", function(d) { return d.source.x; })
+          .attr("y1", function(d) { return d.source.y; })
+          .attr("x2", function(d) { return d.target.x; })
+          .attr("y2", function(d) { return d.target.y; });
+			
+
+
+
+      node.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
+    });
+});  
+
+
+
+
+
+}
+
+
+
+function initGneGraph(file)
+{
+  //var file = "fb/getNetworkPlotData?num=300;model=symbol;symbol=paM1";
+
+d3.json(file, function(json) {
+    var force = self.force = d3.layout.force()
+        .nodes(json.nodes)
+        .links(json.links)
+        //.gravity(.05)
+        //.distance(390)
+        .distance(300)
+        .linkStrength(0.05)
+        //.charge(-100)
+        .charge(-300)
+        .size([w, h])
+        .start();
+
+    var link = vis.selectAll("line.link")
+        .data(json.links)
+        .enter().append("svg:line")
+        .attr("class", "link")
+        .attr("x1", function(d) { return d.source.x; })
+        .attr("y1", function(d) { return d.source.y; })
+        .attr("x2", function(d) { return d.target.x; })
+        .attr("y2", function(d) { return d.target.y; });
+
+    var node = vis.selectAll("g.node")
+        .data(json.nodes)
+      	.enter().append("svg:g")
+        .attr("class", "node")
+        .call(force.drag);
+	/*
+    node.append("svg:image")
+        .attr("class", "circle")
+        .attr("xlink:href", "https://d3nwyuy0nl342s.cloudfront.net/images/icons/public.png")
+        .attr("x", "-8px")
+        .attr("y", "-8px")
+        .attr("width", "16px")
+        .attr("height", "16px");*/
+
+
+
+	node.append("svg:circle")
+      //.attr("r", 15)
+      .attr("r", function(d) { return getSize(); }  )
+      
+      //.style("fill", "#1BE032"  );//.style("fill", function(d) { return color(d.group); }  );
+      .style("fill",  function(d) { return getColor(); }  );
+      
+     // getColor()
+      
+      //.call(force.drag); 
+      
+      
+
+    node.append("svg:text")
+        .attr("class", "nodetext")
+        .attr("dx", 12)
+        .attr("dy", ".35em")
+        .text(function(d) { return d.name });
+    
+    
+    
+    
+    
+    node.on("click", fade(0.1,true)  );
+    
+    
+    /*
+    vis.on("click", function(d){
+    	
+    	
+    	
+    	fade(1,true);
+    
+    
+    
+    
+    });
+    */
+  
+    
+    
+    
+    
+    
+    
+    
+    
+    link.on("click", function(d, i) {
+    					
+    					
+    					//alert(connectedNodes);
+    					//alert( d.source.name+"       "+d.target.name);
+    					
+    					//connectedNodes.push(selectedNodeName);
+    					
+    					
+    					//var matchresult = matchNode(connectedNodes, d.source.name) && matchNode(connectedNodes, d.target.name);
+    					var matchresult = matchLink(connectedLinks,d);
+    					
+    					//connectedNodes.pop();
+    					
+    					
+    					if(matchresult)
+    					{
+    						
+            			link.style("stroke-opacity", function(o) {
+            				
+            				
+            				//var matchresult = matchNode(connectedNodes, o.source.name) || matchNode(connectedNodes, o.target.name);
+            				
+            				if(o===d)
+                			{
+                				link.attr("class", "link");
+                				return 1;
+                			}	
+                			else
+                			{
+                				link.attr("class", "linkHighLightSingle");
+                				return 0;
+                			}
+            			});
+            			
+            			
+            		   }
+            			
+            			
+            			
+        			}
+    
+    );
+    
+    
+    
+    
+    
+    
+    link.on("mouseover", function(d,i) {
+     	
+     	
+     	
+     	var matchresult = matchLink(connectedLinks,d);
+    					
+    					
+    	if(matchresult)
+    	{					
+     		//alert(d.source.name+"     "+d.target.name);
+     		
+     		
+     		link.style("stroke-width", function(o) {
+               
+                if(o.source.name == d.source.name && o.target.name == d.target.name )
+                {
+                	return "7px";
+                }
+                else
+                {
+                	return "1.5px";
+                }
+               
+            });
+     		
+     		
+     		
+     		
+     	}
+     	
+     	
+     	
+     });
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    link.on("contextmenu", function(data, index) {
+     
+     
+        d3.event.preventDefault();
+     
+        link.style("stroke-opacity", function(o) {
+            				if(o===data)
+                			{ 
+                				
+                				link.attr("class", "link");
+                				
+                				var sourceNodeName = o.source.name ;
+                				var targetNodeName = o.target.name;
+                				
+                				
+                				
+                				document.getElementById("genecard_a").style.display = "none"; 
+                				document.getElementById("brainspan_a").style.display = "none"; 
+                				document.getElementById("cox_a").style.display = "none"; 
+                				
+                				document.getElementById("pubmid_a").setAttribute("href", "http://www.ncbi.nlm.nih.gov/pubmed?term="+"(" + sourceNodeName + ")" +"AND"+ "(" + targetNodeName + ")AND(brain)"  );
+     							
+     							
+     	
+     							//document.getElementById("NGPopUp").style.left = "400px";
+     							document.getElementById("NGPopUp").style.top = "300px";
+     							
+     							
+     							document.getElementById("NGPopUp").style.marginLeft = "50%";
+     							document.getElementById("NGPopUp").style.marginRight = "50%";
+     							
+     							document.getElementById("NGPopUp").style.display = "block";     	
+
+
+     							cancelTimer();
+                				
+                				return 1;
+                			}	
+                			else
+                			{
+                				
+                				link.attr("class", "linkHighLightSingle");
+                				return 0;
+                			}
+            			});
+     
+     
+     
+     
+  
+     	
+	});
+    
+    
+
+    
+    /*
+    node.on("mouseover", fade(0.1,true)
+    	
+    							//link.attr("class", "link2");
+    	
+    	   
+    	                              );
+    	                              
+    node.on("mouseout", function(){fade(0,false); setTimer("NGPopUp");}
+    	
+    							//link.attr("class", "link");
+    	
+    	   
+    	                              );	  
+    	                              
+    */	                                                          
+
+	
+	var linkedByIndex = {};
+    json.links.forEach(function(d) {
+        linkedByIndex[d.source.index + "," + d.target.index] = 1;
+    });
+
+
+	function isConnected(a, b) {
+        return linkedByIndex[a.index + "," + b.index] || linkedByIndex[b.index + "," + a.index] || a.index == b.index;
+    }
+
+    
+    var selectedNodeName = "";
+    var connectedNodes = [];
+    var connectedLinks = [];
+
+	function fade(opacity,linkHighLight) {
+        return function(d) {
+        	
+        	
+            node.style("stroke-opacity", function(o) {
+                thisOpacity = isConnected(d, o) ? 1 : opacity;
+                this.setAttribute('fill-opacity', thisOpacity);
+                return thisOpacity;
+            });
+            
+			selectedNodeName = d.name;
+            connectedNodes = [];
+            connectedNodes.push(selectedNodeName);
+
+            link.style("stroke-opacity", function(o) {
+                
+                //link.attr("class", "linkRed");
+                
+                
+                if(linkHighLight)
+                {
+                	link.attr("class", "linkHighLight");
+                }
+                else
+                {
+                	link.attr("class", "link");
+                }
+                
+                
+                
+                
+                if(o.source === d || o.target === d)
+                {
+                	if(o.source === d)
+                	{	connectedNodes.push(o.target.name);
+                            //  alert("t:"+o.target.name);
+                        }
+                	else
+                	{	connectedNodes.push(o.source.name);
+                            //  alert("s:"+o.source.name);
+                        }
+                	
+                	connectedLinks.push(o);
+                	
+                	return 1;
+                }
+                else
+                {
+                	return opacity;
+                }
+                
+                
+                //return o.source === d || o.target === d ? 1 : opacity;
+                
+            });
+            
+            
+            
+            
+            /*
+            link.style("stroke-width", function(o) {
+               
+                if(o.source === d || o.target === d)
+                {
+                	return "7px";
+                }
+                else
+                {
+                	return "1.5px";
+                }
+               
+            });
+            */
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            var s="";
+            connectedNodes = connectedNodes.getUnique();
+            for(var i=0; i<connectedNodes.length;i++)
+            {   
+            	s = s + connectedNodes[i]+"\n";
+            }
+
+
+            //document.getElementById("infoPanel").innerHTML = s;
+            document.getElementById("infoPanel").value = s;
+            
+            
+        };
+    }
+
+
+
+
+	node.on("contextmenu", function(data, index) {
+     
+		//alert("R:"+data.name);
+
+     	d3.event.preventDefault();
+     	
+			
+        showAllLinkField();
+     	
+     	document.getElementById("genecard_a").setAttribute("href", "http://www.genecards.org/cgi-bin/carddisp.pl?gene="+data.name);
+     	document.getElementById("brainspan_a").setAttribute("href", "http://www.brainspan.org/rnaseq/search?type=rnaseq&query="+data.name);
+     	document.getElementById("pubmid_a").setAttribute("href", "http://www.ncbi.nlm.nih.gov/pubmed?term="+data.name);
+     	document.getElementById("cox_a").setAttribute("href", "http://coxpresdb.jp/cgi-bin/inkeyword.cgi?type=any&word="+data.name);
+     	
+     	
+     	//document.getElementById("NGPopUp").style.left = (data.x+300)+"px";
+     	document.getElementById("NGPopUp").style.top = data.y+"px";
+     	
+     	document.getElementById("NGPopUp").style.marginLeft = "50%";
+     	document.getElementById("NGPopUp").style.marginRight = "50%";
+     	
+     	
+     	document.getElementById("NGPopUp").style.display = "block";     	
+     	
+     	
+     	//var item = document.getElementById("button");
+		//item.addEventListener("mouseover", func, false);
+		//item.addEventListener("mouseout", func1, false);
+
+     	cancelTimer();
+     	
+     	
+	});
+
+
+
+
+
+
+
+
+
+
+
+	node.on("dblclick", function(d) {
+    	
+    	
+    	
+    	//node.attr("transform", function(d) { return "translate(" + 300 + "," + 300 + ")"; });
+    	
+    	d.x=400;
+    	d.y=300;
+    	d.px=400;
+    	d.py=300;
+    	force.start();
+    	//force.tick();
+    	
+    	
+    	
+    	
+    							//alert("C");
+    							
+    							
+    							//node.forEach(function(n) {
+    /*if (n.source && node.target) {
+      node.type = node.source.type = "target-source";
+      node.target.type = "source-target";
+    } else if (node.source) {
+      node.type = node.source.type = "source";
+    } else if (node.target) {
+      node.type = node.target.type = "target";
+    } else {
+      node.connectors = [{node: node}];
+      node.type = "source";
+    }*/
+  //});
+    							
+    							
+    							
+    							
+    							
+    							
+    							/*
+    							if (d.children) 
+    							{
+    								d._children = d.children;
+    								d.children = null;
+  								} 
+  								else 
+  								{
+    								d.children = d._children;
+    								d._children = null;
+  								}
+  								update();
+  									*/
+  
+    	   
+    	                              });	 
+
+
+
+
+
+
+    force.on("tick", function() {
+      link.attr("x1", function(d) { return d.source.x; })
+          .attr("y1", function(d) { return d.source.y; })
+          .attr("x2", function(d) { return d.target.x; })
+          .attr("y2", function(d) { return d.target.y; });
+			
+
+
+
+
+
+
+
+
+      node.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
+    });
+});  
+
+
+
+
+
+}
+
+
+Array.prototype.getUnique = function(){
+   var u = {}, a = [];
+   for(var i = 0, l = this.length; i < l; ++i){
+      if(u.hasOwnProperty(this[i])) {
+         continue;
+      }
+      a.push(this[i]);
+      u[this[i]] = 1;
+   }
+   return a;
+}
+
+
+
+var timeout	= 300;
+var closetimer	= 0;
+
+
+function cancelTimer()
+{
+	if(closetimer)
+	{
+		window.clearTimeout(closetimer);
+		closetimer = null;
+	}
+}
+
+function setTimer(itemToClose)
+{
+	closetimer = window.setTimeout( function(){document.getElementById(itemToClose).style.display = "none";  } , timeout);
+}
+
+
+
+var colorIndex = 0;
+function getColor()
+{
+	
+	
+	var a = ["#F73E88","#F74581","#F745F1","#9773FA","#7375FA","#73A7FA","#73EAFA","#4EF5CE","#45E670","#96E60E","#E6D40E","#E67A0E"];
+	
+	var c = a[colorIndex];
+	
+	
+	colorIndex = colorIndex+1;
+	if(colorIndex >= a.length)
+		colorIndex=0;
+	
+	
+	return c;
+}
+
+
+
+var sizeIndex = 0;
+function getSize()
+{
+	
+	
+	var a = [4,6,8,10,12,14,16];
+	
+	var c = a[sizeIndex];
+	
+	
+	sizeIndex = sizeIndex+1;
+	if(sizeIndex >= a.length)
+		sizeIndex=0;
+	
+	
+	return c;
+
+}
+
+
+
+function showAllLinkField()
+{
+	document.getElementById("genecard_a").style.display = "block"; 
+  	document.getElementById("brainspan_a").style.display = "block"; 
+  	document.getElementById("pubmid_a").style.display = "block"; 
+ 	document.getElementById("cox_a").style.display = "block"; 
+
+}
+
+
+
+
+function resetModelSelection()
+{
+	//alert();
+	//vis.selectAll("line").attr("class", "link");
+	modelvis.selectAll("line").style("stroke-opacity",0.1);
+	modelvis.selectAll("line").style("stroke-width",1.5);
+	modelvis.selectAll(".node").style("fill-opacity",1);
+}
+
+
+
+function resetSelection()
+{
+	//alert();
+	//vis.selectAll("line").attr("class", "link");
+	vis.selectAll("line").style("stroke-opacity",0.1);
+	vis.selectAll("line").style("stroke-width",1.5);
+	vis.selectAll(".node").style("fill-opacity",1);
+}
+
+
+
+function showModules()
+{
+	document.getElementById("modelReswetButton").style.display = "block"; 
+	document.getElementById("modelChart").style.display = "block"; 
+	document.getElementById("geneChart").style.display = "none"; 
+    document.getElementById("controlPanelDiv").style.display = "none"; 
+    document.getElementById("sliderDiv").style.display = "none"; 
+	document.getElementById("symbolNameLabel").style.display = "none"; 
+    document.getElementById("symbolNameLabel").innerHTML = ""; 
+}
+
+
+/*
+function matchNode(nodelist,node)
+{
+	
+	
+	var result = false;
+	for(var i=0; i< nodelist.length; i++)
+	{
+		
+		if(nodelist[i] == node)
+		{
+		 	result = true;
+		 	alert(nodelist+"     N:"+node);
+		 	
+		 	break;
+		}
+		
+	}
+	
+	
+	return result;
+	
+	
+}
+*/
+function matchLink(connectedLinks,d)
+{
+	var result = false;
+	for(var i=0; i< connectedLinks.length; i++)
+	{
+		
+		if(connectedLinks[i].source.name == d.source.name  &&  connectedLinks[i].target.name == d.target.name)
+		{
+			//alert(connectedLinks[i].source.name+"    "+connectedLinks[i].target.name);
+		 	result = true;
+		 	//alert(nodelist+"     N:"+node);	
+		 	break;
+		}
+		
+	}
+	
+	
+	return result;
+}
+
+
+
+
+
+function initSlider()
+{
+
+
+// Create a YUI instance and request the slider module and its dependencies
+YUI().use("slider", function (Y) {
+
+	var xInput,  // input tied to xSlider
+    	yInput,  // input tied to ySlider
+    	xSlider; // horizontal Slider
+
+	// Function to pass input value back to the Slider
+	function updateSlider( e ) {
+    	var data   = this.getData(),
+        	slider = data.slider,
+        	value  = parseInt( this.get( "value" ), 10 );
+
+    	if ( data.wait ) 
+    	{
+        	data.wait.cancel();
+    	}
+
+    	// Update the Slider on a delay to allow time for typing
+    	data.wait = Y.later( 200, slider, function () {
+        	data.wait = null;
+        	this.set( "value", value );
+    	} );
+	}
+
+	// Function to update the input value from the Slider value
+	function updateInput( e ) {
+    	this.set( "value", e.newVal );
+    	//alert("g");
+   
+    	
+    	
+    	
+	}
+    
+
+
+	// Link the input value to the Slider
+	xInput = Y.one( "#horiz_value" );
+	xInput.setData( "slider", new Y.Slider({
+            axis: 'x',
+            min   : 0,      // min is the value at the top
+            max   : 1225,     // max is the value at the bottom
+            value : 100,       // initial value
+            length: '500px',  // rail extended to afford all values
+
+            // construction-time event subscription
+            after : {
+                valueChange: Y.bind( updateInput, xInput )
+            }
+        }).render( ".horiz_slider" ) // render returns the Slider
+    )                               // set( "data", ... ) returns the Node
+    .on( "keyup", updateSlider );  
+
+	// Pass the input as the 'this' object inside updateInput
+	//xSlider.after( "valueChange", updateInput, xInput );
+	//xInput.on( "keyup", updateSlider );
+    
+	// Render the Slider next to the input
+	//xSlider.render('.horiz_slider');
+
+
+
+});
+
+
+
+} 
+
+
+
+
+
+function initJQSlider()
+{
+	
+	 $(function() {
+	
+	$( "#jqslider" ).slider({ min: 0,
+		                      max: 1000,
+		                      value: 100,
+		                      slide: function( event, ui ) {
+
+ 										$("#horiz_value").val(ui.value);
+		                      	
+		                      		  }   
+		                      
+		                   });
+	
+	});
+}
+
+
+
+
+
+
+
+function symbolRedraw()
+{
+	
+	//alert(selectedSymbolName);
+	initd3();         
+	//initGneGraph( "data/visant_symbol_" + "paM1" + ".json");
+	
+	var num = document.getElementById("horiz_value").value;
+    		
+    var file = getPlotDataPath()+"?num="+num+";model=symbol;symbol="+selectedSymbolName+";id="+projectId;
+    initGneGraph(file);
+
+	
+	
+}
+
+
+
+
+

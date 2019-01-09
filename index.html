@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<html>
+    <head>
+        <title>Network Browser</title>
+    </head>
+    
+    <body>
+    <h1 id="title"></h1>
+      <!-- <a href="http://www.semel.ucla.edu/coppolalab/databases"><div id="nblogo"></div></a> -->
+   
+      <div id="modelname"></div>
+    
+      <div id="modelChart"></div>
+      <div id="geneChart"></div>
+
+      <div id="credit">Visualization by Yeongshnn Ong and Yining Zhao, <a href="http://www.semel.ucla.edu/coppolalab">Coppola lab</a>. Powered by <a href="http://www.semel.ucla.edu/coppolalab/databases">Rete</a></div>
+    
+      <div id="infoContainerExpandBut">&rsaquo;&rsaquo;</div>
+      <div id="infoContainer">
+      	<div id="hidebar">&lsaquo;&lsaquo;&nbsp;&nbsp;</div>	
+      	
+      	<div>
+      		<div id="backB" onclick="showModules();"></div>
+      		<div id="resetB" onclick="resetSelection();"></div>
+      	</div>
+      	<div style="clear:both;"></div>
+      	<div id="selectlabel">edges</div>
+      	<div id="nbselect">
+      		<input type="text" value="100" class="dial">
+      	</div>
+      	
+      	<div>
+      	  <div id="nodeinfo"></div>	
+      	  <div id="infowin"></div>	
+      	</div>
+      </div>
+    
+    
+      <div id="supportContainer">
+      	<!--<div id="aboutB"></div>-->
+      	<!--<div id="shotB"></div>-->
+      	<div id="searchB"></div>
+      </div> 
+
+<div id="aboutContainer">
+            <h3>Network Plot from "N17 Modifies Mutant Huntingtin Nuclear Pathogenesis and Severity of Disease in HD BAC Transgenic Mice"</h3>
+
+            <h4>Instructions:</h4>
+            <p>1) Click on a node in the module-module plot to evaluate the most connected genes assigned to that module. In this plot, edges show positive correlations (red) and negative correlations (blue) of genes in the module (according to the module eigengene) in the striatum.</p>
+        <p>2) Choose the number of connections you would like to view on the gene-gene plot - the default is to display the top 100 connections (positive correlations) and their associated genes. This browser can display a maximum of 500 connections. For additional genes, please see Supplementary Table S1.</p>
+        <p>3) Navigate by dragging genes, panning by dragging the background, or zooming in and out by scrolling or double-clicking.</p>
+        <p>4) Genes have the color of the selected module.</p>
+        <p>5) Click on a gene - genes sharing connections based on your chosen number of total connections will be highlighted. Click on an edge and you can search PubMed for the two genes together.</p>
+        <p>6) On the left panel, mouse over genes to view plots of expression, kME values, and other info on genes.</p>
+        <p>7) Hit deselect or refresh your browser to select new genes.</p>
+
+            <h4>Notes:</h4>
+            <p>1) Nodes are colored according to module color.</p>
+            <p>2) Edge selection represents the number of top connections.</p>
+
+            <h4>Contact:</h4>
+            <p>For questions about the tables or the data itself, please see the manuscript and supplemental information.</p>
+            <p>For additional questions, please e-mail <a href="mailto:xwyang@mednet.ucla.edu">xwyang@mednet.ucla.edu</a></p>
+
+            <h4>Credits:</h4>
+            <p>Visualization by Yining Zhao, <a href="http://www.semel.ucla.edu/coppolalab">Coppola lab</a>.</p>
+            <p>Powered by <a href="http://www.semel.ucla.edu/coppolalab/databases">Rete</a></p>
+       </div>        
+
+
+      <div id="searchContainer">
+      	<input type="text" id="searchtext">
+      	<!--<button id="searchtextB" onclick="nodeSearch();">search</button>-->
+      </div>	
+    	
+      <div id="NGPopUp" onmouseover="cancelTimer();" onmouseout="setTimer('NGPopUp');">
+    	<ul>
+    		<li style="display: none;" ><a id="repair_a" target="_blank">Repair</a></li>
+    		<li style="display: none;" ><a id="hint_a" target="_blank">HINT</a></li>
+    		<li style="display: none;" ><a id="asviewer_a" target="_blank">AS Viewer</a></li>
+    		<li style="display: none;" ><a id="biogemix_a" target="_blank">Biogemix 3D</a></li>
+    		<li style="display: none;" ><a id="hd_proteome_a" target="_blank">HT Proteome Base</a></li>
+    		<li><a id="genecard_a" target="_blank">GeneCards</a></li>
+    		<li><a id="brainspan_a" target="_blank">BrainSpan</a></li>
+    		<li><a id="pubmid_a" target="_blank">PubMed</a></li>
+    		<li><a id="cox_a" target="_blank">CoxPresDB</a></li>
+    		<li><a id="stanford_a" target="_blank">Stanford Database</a></li>
+    	</ul>
+      </div>
+   
+    </body>
+	
+    <link href="/static/gclabapps/networkBrowser/css/networkGraph.css" rel="stylesheet" type="text/css" />
+ 
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.9.2/jquery-ui.min.js"></script>
+	 
+    <script src="/static/gclabapps/networkBrowser/js/jquery-svg.js"> </script>
+
+    <script src="/static/gclabapps/networkBrowser/js/d3.v2.min.js"> </script>
+    <!-- <script src="/static/gclabapps/networkBrowserDan/js/d3.v2.js"> </script> -->
+    <script src="/static/gclabapps/networkBrowser/js/select.js"> </script>
+    <!-- <script src="/static/gclabapps/networkBrowser/js/networkGraph-min.js"> </script> -->
+    <script src="/static/gclabapps/networkBrowser/js/networkGraph.js"> </script>
+   
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-5324065-19', 'auto');
+  ga('send', 'pageview');
+
+</script>
+<script>
+var getUrlParameter = function getUrlParameter(sParam) {
+    var sPageURL = decodeURIComponent(window.location.search.substring(1)),
+        sURLVariables = sPageURL.split('&'),
+        sParameterName,
+        i;
+
+    for (i = 0; i < sURLVariables.length; i++) {
+        sParameterName = sURLVariables[i].split('=');
+
+        if (sParameterName[0] === sParam) {
+            return sParameterName[1] === undefined ? true : sParameterName[1];
+        }
+    }
+};
+$(document).ready(function() {
+  var projectId = getUrlParameter('id');
+
+  if (projectId === 'hdinhd/AllelicSeries_ConsensusModules_striatum') {
+    hdinhd_striatum = true;
+
+    var csvPath = '/static/gclabapps/networkBrowser/file/striatum_module_description.csv';
+    d3.csv(csvPath, function(data) {
+      moduleDescriptions = data;
+    });
+  } else if (projectId === 'hdinhd/AllelicSeries_ConsensusModules_cortex') {
+    hdinhd_cortex = true;
+
+    var csvPath = '/static/gclabapps/networkBrowser/file/cortex_module_description.csv';
+    d3.csv(csvPath, function(data) {
+      moduleDescriptions = data;
+    });
+  }
+
+  if (projectId.startsWith("hdinhd/")) {
+    projectId = projectId.replace("hdinhd/", "HDinHD ");
+    projectId = projectId.replace("AllelicSeries", "Allelic Series");
+    projectId = projectId.replace("ConsensusModules", "Consensus Modules");
+    projectId = projectId.replace("AgingModules", "Aging Modules");
+    $("h1#title").text(projectId.replace(/_/g, " "));
+  } else {
+    projectId = projectId.replace(";ver", "");
+    $("h1#title").text(projectId);  
+  }
+});
+
+</script>
+</html>
